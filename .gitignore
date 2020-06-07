@@ -2,6 +2,7 @@
 *.srl
 *.nds
 *.rom
+*.gba
 
 # PyCharm
 .idea/
@@ -13,3 +14,7 @@
 build/
 dist/
 *.egg-info/
+
+# Debug ROM
+debugger_code/*.bin
+*.elf

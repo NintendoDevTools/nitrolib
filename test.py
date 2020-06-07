@@ -5,4 +5,4 @@ if __name__ == "__main__":
     emu = NitroEmulator()
     with open("test.nds", "rb") as fp:
         rom = fp.read()
-    emu.load_rom(rom)
+    emu.load_nds_rom(rom)

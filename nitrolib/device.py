@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC
 from struct import pack
 
@@ -12,6 +14,7 @@ class DeviceNotFound(Exception):
 class NitroDevice(ABC):
     is_little_endian: bool
     device: Device
+    debug: bool = False
 
     def __init__(self, device_name: str):
         self.device_name = device_name
