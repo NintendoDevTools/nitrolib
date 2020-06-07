@@ -1,0 +1,15 @@
+# ROMs
+*.srl
+*.nds
+*.rom
+
+# PyCharm
+.idea/
+
+# Compiled Python Files
+*.py[cod]
+
+# Build-related
+build/
+dist/
+*.egg-info/
