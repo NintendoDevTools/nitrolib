@@ -13,7 +13,7 @@ if __name__ == "__main__":
         author_email="mail@martmists.com",
         license="MIT",
         zip_safe=False,
-        version="0.0.0",
+        version="0.0.1",
         description="NitroLib is a library for working wih the various systems "
                     "developed by Intelligent Systems for the Nitro consoles.",
         long_description=README,

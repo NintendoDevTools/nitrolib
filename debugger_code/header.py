@@ -15,8 +15,8 @@ def make_branch(from_addr, to_addr, link):
 
 header = struct.pack(
     'II',
-    make_branch(0x02700000, 0x02701000, False),
-    make_branch(0x02700004, 0x02710000, False)
+    make_branch(0x02700000, 0x02701000, False),  # Jump to ARM9
+    make_branch(0x02700004, 0x02710000, False)   # Jump to ARM7
 )
 
 with open('header.bin', 'wb') as f:

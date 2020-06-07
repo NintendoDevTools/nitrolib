@@ -7,7 +7,7 @@ from usb.util import find_descriptor, claim_interface
 
 from nitrolib.util import partition
 from nitrolib.device import NitroDevice, DeviceNotFound
-from nitrolib.emulator.enums import CommandType, MemoryRegion
+from nitrolib.emulator.enums import WriteCommandType, MemoryRegion, ReadCommandType
 
 
 class NitroEmulator(NitroDevice):
@@ -41,8 +41,8 @@ class NitroEmulator(NitroDevice):
         assert self.endpoint_out is not None
         assert self.endpoint_in is not None
 
-        self.isid = resource_stream(__name__, "resources/isid.bin").read()
-        self.debugger_code = resource_stream(__name__, "resources/debugger_code.bin").read()
+        self.isid = resource_stream(__name__, "../resources/isid.bin").read()
+        self.debugger_code = resource_stream(__name__, "../resources/debugger_code.bin").read()
 
     # Device utils
 
@@ -59,7 +59,7 @@ class NitroEmulator(NitroDevice):
             data += bytes(self.endpoint_in.read(size - len(data)))
         return data
 
-    def read(self, command: CommandType, region: MemoryRegion, address: int, length: int) -> bytes:
+    def read(self, command: ReadCommandType, region: MemoryRegion, address: int, length: int) -> bytes:
         packed = self.encode("HBBIII",
                              command.value,
                              0x11,  # Read
@@ -75,7 +75,7 @@ class NitroEmulator(NitroDevice):
             print("-" * 10)
         return data
 
-    def write(self, command: CommandType, region: MemoryRegion, address: int, data: bytes):
+    def write(self, command: WriteCommandType, region: MemoryRegion, address: int, data: bytes):
         packed = self.encode("HBBIII",
                              command.value,
                              0x10,  # Write
@@ -93,22 +93,22 @@ class NitroEmulator(NitroDevice):
     # Public methods
 
     def full_reset(self):
-        self.write(CommandType.FULL_RESET, MemoryRegion.CONTROL, 0, b'\x81\xF2')
+        self.write(WriteCommandType.FULL_RESET, MemoryRegion.CONTROL, 0, b'\x81\xF2')
 
     def processor_stop(self):
-        self.write(CommandType.CURRENT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x81\x00\x01\x00')
+        self.write(WriteCommandType.CURRENT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x81\x00\x01\x00')
 
     def processor_start(self):
-        self.write(CommandType.CURRENT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x81\x00\x00\x00')
+        self.write(WriteCommandType.CURRENT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x81\x00\x00\x00')
 
     def select_arm9(self):
-        self.write(CommandType.CURRENT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x8b\x00\x00\x00')
+        self.write(WriteCommandType.SELECT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x8b\x00\x00\x00')
 
     def select_arm7(self):
-        self.write(CommandType.CURRENT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x8b\x00\x01\x00')
+        self.write(WriteCommandType.SELECT_PROCESSOR, MemoryRegion.CONTROL, 0, b'\x8b\x00\x01\x00')
 
     def _slot1_toggle(self, on: bool):
-        self.write(CommandType.UNKNOWN_AD, MemoryRegion.CONTROL, 0,
+        self.write(WriteCommandType.UNKNOWN_AD, MemoryRegion.CONTROL, 0,
                    b'\xAD\x00\x00\x00'
                    b'\x0A\x00\x00\x00' +
                    self.encode('I', int(on)) +
@@ -122,28 +122,70 @@ class NitroEmulator(NitroDevice):
     def slot1_off(self):
         self._slot1_toggle(False)
 
-    def _slot2_toggle(self, on: bool):
-        self.write(CommandType.UNKNOWN_AD, MemoryRegion.CONTROL, 0,
+    def slot2_on(self):
+        self.write(WriteCommandType.UNKNOWN_AD, MemoryRegion.CONTROL, 0,
                    b'\xAD\x00\x00\x00'
-                   b'\x0A\x00\x00\x00' +
-                   self.encode('I', int(on)) +
+                   b'\x02\x00\x00\x00'
+                   b'\x01\x00\x00\x00'
+                   b'\x00\x00\x00\x00'
+                   b'\x00\x00\x00\x00'
+                   b'\x00\x00\x00\x00')
+        self.write(WriteCommandType.UNKNOWN_AD, MemoryRegion.CONTROL, 0,
+                   b'\xAD\x00\x00\x00'
+                   b'\x04\x00\x00\x00'
+                   b'\x00\x00\x00\x00'
                    b'\x00\x00\x00\x00'
                    b'\x00\x00\x00\x00'
                    b'\x00\x00\x00\x00')
 
-    def slot2_on(self):
-        self._slot2_toggle(True)
-
     def slot2_off(self):
-        self._slot2_toggle(False)
+        self.write(WriteCommandType.UNKNOWN_AD, MemoryRegion.CONTROL, 0,
+                   b'\xAD\x00\x00\x00'
+                   b'\x02\x00\x00\x00'
+                   b'\x00\x00\x00\x00'
+                   b'\x00\x00\x00\x00'
+                   b'\x00\x00\x00\x00'
+                   b'\x00\x00\x00\x00')
 
-    def write_nds_memory(self, address, data):
-        self.write(CommandType.EMULATION_MEMORY, MemoryRegion.NDS, address, data)
+    def write_slot1(self, address, data):
+        self.write(WriteCommandType.WRITE_MAIN_MEMORY, MemoryRegion.NDS, address, data)
 
-    def read_nds_memory(self, address, length):
-        self.read(CommandType.EMULATION_MEMORY, MemoryRegion.NDS, address, length)
+    def read_slot1(self, address, length):
+        self.read(ReadCommandType.READ_MAIN_MEMORY, MemoryRegion.NDS, address, length)
 
-    def load_nds_rom(self, rom: bytes, to_firmware: bool = False):
+    def write_slot2(self, address, data):
+        self.write(WriteCommandType.WRITE_MAIN_MEMORY, MemoryRegion.GBA, address, data)
+
+    def read_slot2(self, address, length):
+        self.read(ReadCommandType.READ_MAIN_MEMORY, MemoryRegion.GBA, address, length)
+
+    def read_nec(self, address, unit, count):
+        header = self.encode("BBHI",
+                             0x25,
+                             unit,
+                             count,
+                             address)
+        self.write(WriteCommandType.READ_NEC_CONTROL, MemoryRegion.CONTROL, 0, header)
+        return self.read(ReadCommandType.READ_NEC, MemoryRegion.CONTROL, 0, 8)
+
+    def write_nec(self, address, unit, count, data):
+        header = self.encode("BBHI",
+                             0x26,
+                             unit,
+                             count,
+                             address)
+        self.write(WriteCommandType.WRITE_NEC, MemoryRegion.CONTROL, 0, header + data)
+
+    def _write_video_register(self, register, data):
+        self.write_nec(0x8000030, 2, 1, self.encode('BB', register, 0))
+        self.write_nec(0x8000034, 2, 1, self.encode('BB', data & 0xFF, 0))
+        self.write_nec(0x8000036, 2, 1, self.encode('BB', data >> 8, 0))
+
+    def trigger_fiq(self):
+        self.write(WriteCommandType.FIQ, MemoryRegion.CONTROL, 0, b'\xaa\x00\x01\x00')
+        self.write(WriteCommandType.FIQ, MemoryRegion.CONTROL, 0, b'\xaa\x00\x00\x00')
+
+    def load_nds_rom(self, rom: bytes, to_firmware: bool = False, enable_gba: bool = False):
         self.full_reset()
         self.processor_stop()
         self.slot1_off()
@@ -158,22 +200,34 @@ class NitroEmulator(NitroDevice):
         rom_chunk_size = 1 << 16  # 65536 bytes at a time
         for i, rom_chunk in enumerate(partition(rom, rom_chunk_size)):
             print(hex(i * rom_chunk_size), "/", hex(len(rom)))
-            self.write_nds_memory(i * rom_chunk_size, rom_chunk)
+            self.write_slot1(i * rom_chunk_size, rom_chunk)
 
         # TODO: Look into whether this is needed
         # self.write(MemoryRegion.EMULATION_MEMORY, InteractionType.NDS, 0, rom[:0x160])
 
-        self.write_nds_memory(0x0FF80000, self.debugger_code)
-        self.write(CommandType.EMULATION_MEMORY, MemoryRegion.GBA, 0, self.isid)
+        self.write_slot1(0x0FF80000, self.debugger_code)
+        self.write(WriteCommandType.WRITE_MAIN_MEMORY, MemoryRegion.GBA, 0, self.isid)
 
         if not to_firmware:
-            self.write_nds_memory(
+            self.write_slot1(
                 0x160,
                 self.encode("IIII",
                             0x8FF80000,                  # Debug rom offset
                             len(self.debugger_code),     # Debug rom size
-                            0x02700000,                  # Debug rom - ram address to load into
-                            0x02700004))                 # Unknown?
+                            0x02700000,                  # ARM9 Entry
+                            0x02700004))                 # ARM7 Entry
 
+        if enable_gba:
+            self.slot2_on()
         self.slot1_on()
         self.processor_start()
+
+    def load_gba_rom(self):
+        self.full_reset()
+        self.slot2_off()
+        self.processor_stop()
+        self.slot2_on()
+        self.processor_start()
+
+    def enable_video(self):
+        pass
