@@ -18,3 +18,4 @@ dist/
 # Debug ROM
 debugger_code/*.bin
 *.elf
+test.*

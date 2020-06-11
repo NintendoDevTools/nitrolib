@@ -6,4 +6,9 @@ Intelligent Systems for the Nitro consoles.
 
 --------------
 
-TODO
+Supported devices:
+
+- IS-NITRO-EMULATOR
+    - Load ROMs
+    - Read/Write to RAM
+    - Trigger interrupts

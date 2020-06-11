@@ -185,7 +185,8 @@ class NitroEmulator(NitroDevice):
         self.write(WriteCommandType.FIQ, MemoryRegion.CONTROL, 0, b'\xaa\x00\x01\x00')
         self.write(WriteCommandType.FIQ, MemoryRegion.CONTROL, 0, b'\xaa\x00\x00\x00')
 
-    def load_nds_rom(self, rom: bytes, to_firmware: bool = False, enable_gba: bool = False):
+    def load_nds_rom(self, rom: bytes, to_firmware: bool = False, enable_gba: bool = False, debug_rom: bytes = None):
+        debug_rom = debug_rom or self.debugger_code
         self.full_reset()
         self.processor_stop()
         self.slot1_off()
@@ -205,17 +206,17 @@ class NitroEmulator(NitroDevice):
         # TODO: Look into whether this is needed
         # self.write(MemoryRegion.EMULATION_MEMORY, InteractionType.NDS, 0, rom[:0x160])
 
-        self.write_slot1(0x0FF80000, self.debugger_code)
+        self.write_slot1(0x0FF80000, debug_rom)
         self.write(WriteCommandType.WRITE_MAIN_MEMORY, MemoryRegion.GBA, 0, self.isid)
 
         if not to_firmware:
             self.write_slot1(
                 0x160,
                 self.encode("IIII",
-                            0x8FF80000,                  # Debug rom offset
-                            len(self.debugger_code),     # Debug rom size
-                            0x02700000,                  # ARM9 Entry
-                            0x02700004))                 # ARM7 Entry
+                            0x8FF80000,         # Debug rom offset
+                            len(debug_rom),     # Debug rom size
+                            0x02700000,         # ARM9 Entry
+                            0x02700004))        # ARM7 Entry
 
         if enable_gba:
             self.slot2_on()

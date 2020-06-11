@@ -13,16 +13,16 @@ if __name__ == "__main__":
         author_email="mail@martmists.com",
         license="MIT",
         zip_safe=False,
-        version="0.0.1",
+        version="0.0.2",
         description="NitroLib is a library for working wih the various systems "
                     "developed by Intelligent Systems for the Nitro consoles.",
         long_description=README,
-        url="https://github.com/martmists/nitrolib",
+        url="https://github.com/NintendoDevTools/nitrolib",
         packages=pkgs,
         install_requires=["pyusb"],
         entry_points={
             # TODO: Proper CLI interface
-            "console_scripts": ["loadrom_emulator = nitrolib.__main__:loadrom_emulator"]
+            "console_scripts": ["nitro = nitrolib.__main__:main"]
         },
         keywords=[],
         classifiers=[
